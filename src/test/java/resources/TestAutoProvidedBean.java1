@@ -1,0 +1,18 @@
+import com.example.processor.AutoProvided;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+
+/**
+ * @author bfsan
+ * @since 2020/4/15
+ **/
+@AutoProvided
+public class TestAutoProvidedBean {
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    public void helloWorld() {
+        System.out.println("say");
+    }
+}

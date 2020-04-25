@@ -1,9 +1,11 @@
 package com.example.processor;
 
 import com.google.auto.service.AutoService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import java.util.Set;
 
@@ -22,11 +24,18 @@ public class MyProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        System.out.println("开始扫描");
-        for (TypeElement typeElement : annotations) {
-            System.out.println(typeElement);
+        if (roundEnv.processingOver()) {
+            return true;
         }
+        System.out.println("开始扫描");
+
+        //收集标记注解的element，转换为element entity
+        for (Element element : roundEnv.getElementsAnnotatedWith(Autowired.class)) {
+            System.out.println(element);
+        }
+
+        //为构造方法增加代码内容
         System.out.println(roundEnv);
-        return true;
+        return false;
     }
 }
