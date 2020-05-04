@@ -1,4 +1,6 @@
-package com.exmaple.processor.test;
+package com.exmaple.processor.test.util;
+
+import com.exmaple.processor.test.MyProcessorTesting;
 
 import java.io.BufferedReader;
 import java.io.File;

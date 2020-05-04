@@ -89,6 +89,14 @@
             <scope>test</scope>
         </dependency>
         <!--endregion-->
+
+        <dependency>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+            <version>1.8</version>
+            <scope>system</scope>
+            <systemPath>${java.home}/../lib/tools.jar</systemPath>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -100,6 +108,7 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                    <!--FIXME 使用maven compile时会编译两次导致Processor修改的class被覆盖，build则不会-->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>com.google.auto.service</groupId>
@@ -108,7 +117,27 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+                <!--                <executions>-->
+                <!--                    <execution>-->
+                <!--                        <id>default-compile</id>-->
+                <!--                        <configuration>-->
+                <!--                            <compilerArgument>-proc:none</compilerArgument>-->
+                <!--                            <includes>-->
+                <!--                                <include>com/example/processor/MyProcessor.java</include>-->
+                <!--                                &lt;!&ndash;include dependencies required for LogMeCustomAnnotationProcessor &ndash;&gt;-->
+                <!--                            </includes>-->
+                <!--                        </configuration>-->
+                <!--                    </execution>-->
+                <!--                    <execution>-->
+                <!--                        <id>compile-project</id>-->
+                <!--                        <phase>compile</phase>-->
+                <!--                        <goals>-->
+                <!--                            <goal>compile</goal>-->
+                <!--                        </goals>-->
+                <!--                    </execution>-->
+                <!--                </executions>-->
             </plugin>
+
             <!--            <plugin>-->
             <!--                <groupId>org.apache.maven.plugins</groupId>-->
             <!--                <artifactId>maven-compiler-plugin</artifactId>-->

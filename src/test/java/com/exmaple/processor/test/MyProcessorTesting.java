@@ -1,6 +1,7 @@
 package com.exmaple.processor.test;
 
 import com.example.processor.MyProcessor;
+import com.exmaple.processor.test.util.TestUtils;
 import com.google.common.truth.Truth;
 import com.google.testing.compile.JavaFileObjects;
 import org.junit.Test;
@@ -18,13 +19,15 @@ public class MyProcessorTesting {
 
     @Test
     public void testExecute() throws Exception {
-        String sourcePath = TestUtils.getResourcePath("TestAutoProvidedBean.txt");
+        String fullyQualifiedName = "TestAutoProvidedBean";
+        String sourcePath = TestUtils.getResourcePath(fullyQualifiedName + ".txt");
         JavaFileObject javaFileObject = JavaFileObjects
-                .forSourceString("TestAutoProvidedBean", TestUtils.getSourceString(sourcePath));
+                .forSourceString(fullyQualifiedName, TestUtils.getSourceString(sourcePath));
         Truth.assert_().about(javaSource())
                 .that(javaFileObject)
                 .processedWith(new MyProcessor())
                 .compilesWithoutError();
+        System.out.println(1);
     }
 
     /*
