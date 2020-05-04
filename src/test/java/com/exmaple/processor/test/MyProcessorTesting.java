@@ -17,19 +17,10 @@ import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 public class MyProcessorTesting {
 
     @Test
-    public void testExecute() {
-        JavaFileObject javaFileObject = JavaFileObjects.forSourceLines("TestAutoProvidedBean",
-                "import com.example.processor.AutoProvided;\n",
-                "import org.springframework.beans.factory.annotation.Autowired;\n",
-                "import org.springframework.context.ApplicationContext;",
-                "@AutoProvided\n",
-                "public class TestAutoProvidedBean {\n",
-                "    @Autowired\n",
-                "    private ApplicationContext applicationContext;\n",
-                "    public void helloWorld() {\n",
-                "        System.out.println(\"say\");\n",
-                "    }\n",
-                "}");
+    public void testExecute() throws Exception {
+        String sourcePath = TestUtils.getResourcePath("TestAutoProvidedBean.txt");
+        JavaFileObject javaFileObject = JavaFileObjects
+                .forSourceString("TestAutoProvidedBean", TestUtils.getSourceString(sourcePath));
         Truth.assert_().about(javaSource())
                 .that(javaFileObject)
                 .processedWith(new MyProcessor())
