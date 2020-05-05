@@ -37,9 +37,6 @@ public class MyProcessor extends AbstractProcessor {
     private Trees trees;
     private Messager messager;
 
-    /**
-     * TODO 提供器路径改为由配置方式提供
-     */
     private String supplierName;
 
     public void init() {
