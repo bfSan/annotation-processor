@@ -12,8 +12,10 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author bfsan
@@ -29,6 +31,8 @@ public class MyProcessor extends AbstractProcessor {
     private Context context;
     private Trees trees;
 
+    private String componentName = "com.example.asm.util.SpringUtils.getBean";
+
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (roundEnv.processingOver()) {
@@ -36,7 +40,6 @@ public class MyProcessor extends AbstractProcessor {
         }
         final Messager messager = processingEnv.getMessager();
         trees = Trees.instance(processingEnv);
-
         context = ((JavacProcessingEnvironment) processingEnv).getContext();
         treeMaker = TreeMaker.instance(context);
         names = Names.instance(context).table;
@@ -48,27 +51,34 @@ public class MyProcessor extends AbstractProcessor {
             ElementCollector elementCollector = new ElementCollector().init();
             elementCollector.scan(root);
 
-            //为构造方法增加代码内容
+            //生成赋值语句
+            Collection<JCTree.JCStatement> assignmentStatements = elementCollector.getInjectableVariable()
+                    .stream()
+                    .map((variableElement) -> {
+                        JCTree.JCExpression lExpr = treeMaker.Ident(getNameFromString(variableElement.getSimpleName().toString()));
+                        JCTree.JCExpression rExpr = treeMaker.Apply(
+                                null,
+                                memberAccess(componentName),
+                                List.of(memberAccess(variableElement.asType().toString() + ".class"))
+                        );
+                        return makeAssignment(lExpr, rExpr);
+                    })
+                    .collect(Collectors.toList());
+
+            //为构造方法增加赋值语句
             elementCollector.getConstructs()
                     .parallelStream()
                     .filter(Objects::nonNull)
                     .forEach(construct -> {
                         JCTree.JCMethodDecl methodDecl = (JCTree.JCMethodDecl) trees.getTree(construct);
 
-
+                        //将赋值语句加入到构造方法中
                         ListBuffer<JCTree.JCStatement> statements = new ListBuffer<>();
-                        statements.addAll(methodDecl.body.getStatements());
-                        statements.add(treeMaker.Exec(treeMaker.Apply(
-                                List.of(memberAccess("java.lang.String")),
-                                memberAccess("java.lang.System.out.println"),
-                                List.of(treeMaker.Literal("Hello world"))
-                        )));
+                        statements.addAll(methodDecl.getBody().getStatements());
+                        statements.addAll(assignmentStatements);
                         methodDecl.body = treeMaker.at(methodDecl.getPreferredPosition()).Block(0, statements.toList());
                     });
-
-            System.out.println(1);
         }
-
         //结束处理
         return true;
     }
@@ -86,4 +96,10 @@ public class MyProcessor extends AbstractProcessor {
         return expr;
     }
 
+
+    private JCTree.JCExpressionStatement makeAssignment(JCTree.JCExpression lhs, JCTree.JCExpression rhs) {
+        return treeMaker.Exec(
+                treeMaker.Assign(lhs, rhs)
+        );
+    }
 }
