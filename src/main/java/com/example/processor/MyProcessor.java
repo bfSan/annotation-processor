@@ -12,8 +12,13 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,42 +35,64 @@ public class MyProcessor extends AbstractProcessor {
     private Name.Table names;
     private Context context;
     private Trees trees;
+    private Messager messager;
 
-    private String componentName = "com.example.asm.util.SpringUtils.getBean";
+    /**
+     * TODO 提供器路径改为由配置方式提供
+     */
+    private String supplierName;
+
+    public void init() {
+        messager = processingEnv.getMessager();
+        trees = Trees.instance(processingEnv);
+        context = ((JavacProcessingEnvironment) processingEnv).getContext();
+        treeMaker = TreeMaker.instance(context);
+        names = Names.instance(context).table;
+
+        String supplierName = null;
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream("supplierConfig.properties")) {
+            Properties config = new Properties();
+            config.load(in);
+            supplierName = config.getProperty("supplierName");
+            if (supplierName == null || supplierName.length() == 0) {
+                throw new IllegalArgumentException("supplierName配置未提供");
+            }
+        } catch (Exception e) {
+            printError(e);
+        }
+
+        this.supplierName = supplierName;
+
+        printInfo("初始化完成");
+    }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (roundEnv.processingOver()) {
             return true;
         }
-        final Messager messager = processingEnv.getMessager();
-        trees = Trees.instance(processingEnv);
-        context = ((JavacProcessingEnvironment) processingEnv).getContext();
-        treeMaker = TreeMaker.instance(context);
-        names = Names.instance(context).table;
-
-        messager.printMessage(Diagnostic.Kind.NOTE, "开始处理AutoProvided");
-
+        init();
+        printInfo("开始处理AutoProvided");
         for (Element root : roundEnv.getRootElements()) {
             //收集标记注解的element & construct
             ElementCollector elementCollector = new ElementCollector().init();
             elementCollector.scan(root);
 
-            //生成赋值语句
+            printInfo("生成赋值语句");
             Collection<JCTree.JCStatement> assignmentStatements = elementCollector.getInjectableVariable()
                     .stream()
                     .map((variableElement) -> {
                         JCTree.JCExpression lExpr = treeMaker.Ident(getNameFromString(variableElement.getSimpleName().toString()));
                         JCTree.JCExpression rExpr = treeMaker.Apply(
                                 null,
-                                memberAccess(componentName),
-                                List.of(memberAccess(variableElement.asType().toString() + ".class"))
+                                memberAccess(supplierName),
+                                List.of(memberAccess(variableElement.asType() + ".class"))
                         );
                         return makeAssignment(lExpr, rExpr);
                     })
                     .collect(Collectors.toList());
 
-            //为构造方法增加赋值语句
+            printInfo("为构造方法增加赋值语句");
             elementCollector.getConstructs()
                     .parallelStream()
                     .filter(Objects::nonNull)
@@ -79,8 +106,8 @@ public class MyProcessor extends AbstractProcessor {
                         methodDecl.body = treeMaker.at(methodDecl.getPreferredPosition()).Block(0, statements.toList());
                     });
         }
-        //结束处理
-        return true;
+        printInfo("处理完成");
+        return false;
     }
 
     private Name getNameFromString(String s) {
@@ -101,5 +128,23 @@ public class MyProcessor extends AbstractProcessor {
         return treeMaker.Exec(
                 treeMaker.Assign(lhs, rhs)
         );
+    }
+
+    private String getExceptionStackTrace(Exception e) {
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
+    }
+
+    private void printInfo(String msg) {
+        messager.printMessage(Diagnostic.Kind.NOTE, msg);
+    }
+
+    private void printError(String msg) {
+        messager.printMessage(Diagnostic.Kind.ERROR, msg);
+    }
+
+    private void printError(Exception e) {
+        printError(getExceptionStackTrace(e));
     }
 }
